@@ -1,3 +1,4 @@
 libs
 wui/static/icons/*.png
-
+*~
+**__pycache__**

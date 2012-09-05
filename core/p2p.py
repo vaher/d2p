@@ -72,9 +72,10 @@ class P2PTransport(object):
                                   tornado.ioloop.IOLoop.READ)
 
         p2pCfg = cfg.get('p2p', {})
-        bootstrapCfg = cfg.get('bootstraps', [{
-            'bsType': 'manual',
-        }])
+        bootstrapCfg = cfg.get('bootstraps', [
+        {'bsType': 'manual'}, 
+        {'bsType': 'local_multicast'}
+        ])
         for bcfg in bootstrapCfg:
             bs = bootstrap.create(bcfg)
             self._addBootstrap(bs)
@@ -111,13 +112,13 @@ class P2PTransport(object):
     def _onBootstrapFoundEntry(self, bse):
         if bse.transportId != self.transport_id:
             return # We don't support that type of connections
-
+        
         # Are we connected to this host already?
         if not any((bse.addr, bse.port) == ep.remoteAddr for ep in self.endpoints):
             self._connectTo(bse.addr, bse.port)
 
     def _connectTo(self, addr, port):
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(addr, port, socket.AF_INET6, socket.SOCK_STREAM)[0]
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(addr, port, socket.AF_INET, socket.SOCK_STREAM)[0]
         s = socket.socket(family, socktype, proto)
         s.setblocking(0)
         ios = tornado.iostream.IOStream(s, self._io_loop)

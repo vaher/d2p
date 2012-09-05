@@ -58,4 +58,78 @@ $('.p2p_bootstrap[data-bootstrap-type="manual"]').each(function(i, el) {
     entryTable.find('tbody').append(newRow);
 });
 
+
+
+
+
+
+
+
+
+
+$('.p2p_bootstrap[data-bootstrap-type="local_multicast"]').each(function(i, el) {
+    var bsEl = $(el);
+
+    var entryTable = bsEl.find('.p2p_bootstrap_entries');
+    
+    
+    var newRow = $('<tr class="p2p_bootstrap_newRow">');
+
+    var refresh = $('<input type="button">');
+    refresh.attr({value: d2p.i18n('Refresh')});
+    refresh.click(function() {
+        document.location.reload(true)
+    });
+    var td = $('<td>');
+    refresh.appendTo(td);
+    td.appendTo(newRow);
+    
+    
+    var start_mc_bs_period = $('<input type="button">');
+    start_mc_bs_period.attr({value: d2p.i18n('Start Period')});
+    start_mc_bs_period.click(function() {
+        var entry = {'action': 'start'};
+        var url = '/_transports/p2p/bootstrap/' + bsEl.attr('data-bootstrap-id') + '/multicast/entries/';
+        d2p.sendQuery(url, entry, function() {
+            d2p.content_goto('/_transports/p2p/');
+        });
+    });
+    var td = $('<td>');
+    start_mc_bs_period.appendTo(td);
+    td.appendTo(newRow);
+
+
+    var start_mc_bs = $('<input type="button">');
+    start_mc_bs.attr({value: d2p.i18n('Start Permanently')});
+    start_mc_bs.click(function() {
+        
+        var entry = {'action': 'start'};
+        var url = '/_transports/p2p/bootstrap/' + bsEl.attr('data-bootstrap-id') + '/multicast/entries/';
+        d2p.sendQuery(url, entry, function() {
+            d2p.content_goto('/_transports/p2p/');
+            //start_mc_bs_period.attr("disabled", "disabled");
+        });
+    });
+    
+    var td = $('<td>');
+    start_mc_bs.appendTo(td);
+
+    var stop_mc_bs = $('<input type="button">');
+    stop_mc_bs.attr({value: d2p.i18n('Stop')});
+    stop_mc_bs.click(function() {
+        var entry = {'action': 'stop'};
+        var url = '/_transports/p2p/bootstrap/' + bsEl.attr('data-bootstrap-id') + '/multicast/entries/';
+        d2p.sendQuery(url, entry, function() {
+            d2p.content_goto('/_transports/p2p/');
+        });
+    });
+    stop_mc_bs.appendTo(td);
+    td.appendTo(newRow);
+
+
+    entryTable.find('tbody').append(newRow);
+});
+
+
+
 });

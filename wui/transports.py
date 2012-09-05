@@ -128,3 +128,25 @@ class P2PManualBootstrapHandler(TemplatingHandler): # Add and configure a manual
         bs.ui_addEntry(bse)
         self.write({'_status': 'added'})
 
+class P2PMulticastBootstrapHandler(TemplatingHandler):
+    def post(self, bsId, entry=None):
+        assert bsId
+        bsId = int(bsId)
+        p2pTransport = self.application.netCore.ui_p2pTransport()
+        bs = next(bs for bs in p2pTransport.ui_bootstraps if bs.assignedId == bsId)
+        assert bs.bootstrap_type == 'local_multicast'
+        
+        action = self.get_argument('action')
+        print(action)
+        #assert all(args)
+        if action == 'start':
+            bs.stop_bootstrap() # If at least one instance is alread running, then first stop it. Then start.
+            bs.start_bootstrap()
+        elif action == 'stop':
+            bs.stop_bootstrap()
+        elif action == 'period':
+            #bs.stop_bootstrap() # If at least one instance is alread running, then first stop it. Then start.
+            print("To implement")
+        
+        print("Starte Multicast Bootstrap")
+        

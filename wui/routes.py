@@ -7,7 +7,7 @@ from .fallback import PingHandler,WSPingHandler
 from .projects import ListProjectsHandler,CreateProjectHandler
 from . import cono_projects
 from . import lecture
-from .transports import DTNHandler,DTNEndpointHandler,P2PHandler,P2PBootstrapHandler,P2PManualBootstrapHandler
+from .transports import DTNHandler,DTNEndpointHandler,P2PHandler,P2PBootstrapHandler,P2PManualBootstrapHandler, P2PMulticastBootstrapHandler
 from . import templating
 
 _STATIC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -38,4 +38,5 @@ routes = ([
     (r"/_transports/p2p/", P2PHandler),
     (r"/_transports/p2p/bootstrap/", P2PBootstrapHandler),
     (r"/_transports/p2p/bootstrap/([0-9a-zA-Z]+)/manual/entries/", P2PManualBootstrapHandler),
+    (r"/_transports/p2p/bootstrap/([0-9a-zA-Z]+)/multicast/entries/", P2PMulticastBootstrapHandler),
 ])
