@@ -153,7 +153,7 @@ class MulticastBootstrap():
         if is_data_valid is not False:
             jsonData = is_data_valid
             if jsonData["MSG_TYPE"] == self.BOOTSTRAP_MSG:
-                self._notifyMember("p2p-ipv6-tcp", addr[0], int(jsonData["DATA"]["TRANSPORT_PORT"]))
+                #self._notifyMember("p2p-ipv6-tcp", addr[0], int(jsonData["DATA"]["TRANSPORT_PORT"])) # Währe ein Angrifspunkt für die Anwendung
                 dest_addr = (addr[0], jsonData["DATA"]["PORT"])
                 TEMP_INFO = jsonData["DATA"]["RANDOMNUM"]
                 self._sendBootstrapAnswer(sock, dest_addr, TEMP_INFO)

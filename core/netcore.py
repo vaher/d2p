@@ -10,7 +10,7 @@ class NetworkCore(netcorebase.AbstractNetCore):
     def __init__(self, io_loop, cfg, projectManager=None):
         super(NetworkCore, self).__init__(projectManager)
         self._transports = [
-            #DTNTransport(io_loop, self, cfg),
+            DTNTransport(io_loop, self, cfg),
             P2PTransport(io_loop, self, cfg)
         ]
 

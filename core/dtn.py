@@ -36,7 +36,8 @@ def _mounted_devs():
     return dict(parseMountOutput(mountOutput))
 
 def _all_devs():
-    return _is_android_dev()
+    if _is_android_dev():
+        return False
     context = pyudev.Context()
     uDevs = context.list_devices(**_UDEV_SEARCHCRIT)
     return filter(_UDEV_FILTER, uDevs)
@@ -158,6 +159,8 @@ class DTNTransport(object):
 
     def ui_listEndpointInfo(self):
         mounted = _mounted_devs()
+        if not _all_devs():
+            return
         for dev in _all_devs():
             yield self._getEndpointInfo(dev, mounted)
 

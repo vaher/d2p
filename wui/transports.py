@@ -5,13 +5,15 @@ import d2p.core.bootstrap
 class DTNHandler(TemplatingHandler):
     def get(self): # List all DTN transports
         dtnTransport = self.application.netCore.ui_dtnTransport
-
         dct = {
             'template': 'dtn_list',
             'title': 'DTN endpoints',
             'scripts': [{'src': '/static/transport-dtn.js'}],
         }
-        dct['dtn_endpoints'] = list(dtnTransport.ui_listEndpointInfo())
+        if dtnTransport is not None:
+            dct['dtn_endpoints'] = list(dtnTransport.ui_listEndpointInfo())
+        else:
+            dct['title'] = 'DTN endpoints steht nicht zur Verfügung'
         self.render(dct)
 
 class DTNEndpointHandler(TemplatingHandler):
