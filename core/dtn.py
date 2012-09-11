@@ -7,10 +7,21 @@ from . import project
 from .projectmanager import ProjectManager
 from .netcorebase import VirtualNetCore
 
-import pyudev
+
+def _is_android_dev():
+    try:
+        import android
+        return True
+    except ImportError:
+        return False
+        
+if not _is_android_dev():
+    import pyudev
 
 _UDEV_SEARCHCRIT = dict(subsystem='block')
 _UDEV_FILTER = lambda d: d.get('ID_BUS') == 'usb' and d.get('DEVTYPE') == 'partition'
+
+
 
 def _mounted_devs():
     """ Returns a set of mounted devices """
@@ -25,6 +36,7 @@ def _mounted_devs():
     return dict(parseMountOutput(mountOutput))
 
 def _all_devs():
+    return _is_android_dev()
     context = pyudev.Context()
     uDevs = context.list_devices(**_UDEV_SEARCHCRIT)
     return filter(_UDEV_FILTER, uDevs)
@@ -174,6 +186,7 @@ class DTNTransport(object):
             project.handleEndpoint(e)
 
     def _setupChangeMonitor(self):
+        return _is_android_dev()
         context = pyudev.Context()
         monitor = pyudev.Monitor.from_netlink(context)
         monitor.filter_by(**_UDEV_SEARCHCRIT)

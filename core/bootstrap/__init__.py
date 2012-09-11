@@ -1,5 +1,5 @@
-from .multicastbootstrap import ip_mcast_receiver
-from .multicastbootstrap import membermanager
+from . import multicastbootstrap
+
 
 import collections
 
@@ -30,14 +30,8 @@ class MulticastBootstrap(object):
         self._onFind = onFind
         self._entries = []
                 
-        memberManager = membermanager.MemberManager(self._getAdvertised, self.ui_addEntry)
-        self._multicastBootstrap = ip_mcast_receiver.MulticastBootstrap(memberManager, io_loop)        
-
-    def start_bootstrap(self):
-        self._multicastBootstrap.sending_multicast_start()
-        
-    def stop_bootstrap(self):
-        self._multicastBootstrap.sending_multicast_stop()
+        self._multicast_bootstrap = multicastbootstrap.MulticastBootstrap(io_loop, self._getAdvertised, self.ui_addEntry)        
+        self.set_bootstrapping =  self._multicast_bootstrap.set_bootstrapping
 
     def renotify(self):
         """ Call onFind for all entries this bootstrap has found """
@@ -47,9 +41,13 @@ class MulticastBootstrap(object):
     @property
     def ui_entries(self):
         return self._entries
+        
+    @property
+    def ui_last_bs(self):
+        return "Mein letzter bs"
 
     def ui_addEntry(self, bse):
-        print(isinstance(bse, BootstrapEntry))
+        #print(isinstance(bse, BootstrapEntry))
         #assert isinstance(bse, BootstrapEntry) #TODO: Überlege wie ich es schaffe, dass es die selbe Instanz ist!
         assert bse.addr
         self._entries.append(bse)

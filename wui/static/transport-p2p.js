@@ -74,6 +74,25 @@ $('.p2p_bootstrap[data-bootstrap-type="local_multicast"]').each(function(i, el) 
     
     
     var newRow = $('<tr class="p2p_bootstrap_newRow">');
+    
+    var entry = {'action': 'last_bootstrap_time'};
+    var url = '/_transports/p2p/bootstrap/' + bsEl.attr('data-bootstrap-id') + '/multicast/entries/';
+    var data_temp = d2p.i18n("Keine Angabe möglich");
+    d2p.sendQuery(url, entry, function(data) {
+        data_temp = data['last_bs'];
+        
+        //d2p.content_goto('/_transports/p2p/');
+    });
+
+    
+    var last_bootstrap_request =  $('<div>').text(data_temp);
+    var td = $('<td>');
+    last_bootstrap_request.appendTo(td);
+    td.appendTo(newRow);
+    entryTable.find('tbody').append(newRow);
+    
+    
+    var newRow = $('<tr class="p2p_bootstrap_newRow">');
 
     var refresh = $('<input type="button">');
     refresh.attr({value: d2p.i18n('Refresh')});

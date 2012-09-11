@@ -118,7 +118,7 @@ class P2PTransport(object):
             self._connectTo(bse.addr, bse.port)
 
     def _connectTo(self, addr, port):
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(addr, port, socket.AF_INET, socket.SOCK_STREAM)[0]
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(addr, port, socket.AF_INET6, socket.SOCK_STREAM)[0]
         s = socket.socket(family, socktype, proto)
         s.setblocking(0)
         ios = tornado.iostream.IOStream(s, self._io_loop)

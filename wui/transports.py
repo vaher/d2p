@@ -76,16 +76,34 @@ class DTNEndpointHandler(TemplatingHandler):
 class P2PHandler(TemplatingHandler):
     def get(self): # List all P2P endpoints and bootstraps
         p2pTransport = self.application.netCore.ui_p2pTransport()
-        bootstraps = [{
-            'id': bs.assignedId,
+        #bootstraps = [{
+        #    'id': bs.assignedId,
+        #    'name': bs.ui_bootstrap_name,
+        #    'type': bs.bootstrap_type,
+        #    
+        #    'entries': [{
+        #        'transportId': e.transportId,
+        #        'addr': e.addr,
+        #        'port': e.port,
+        #    } for e in bs.ui_entries]
+        #    
+        #} for bs in p2pTransport.ui_bootstraps
+        
+        #if bs.bootstrap_type == 'local_multicast']
+        bootstraps = []
+        for bs in p2pTransport.ui_bootstraps:
+            bootstrap = {'id': bs.assignedId,
             'name': bs.ui_bootstrap_name,
             'type': bs.bootstrap_type,
             'entries': [{
                 'transportId': e.transportId,
                 'addr': e.addr,
                 'port': e.port,
-            } for e in bs.ui_entries]
-        } for bs in p2pTransport.ui_bootstraps]
+            } for e in bs.ui_entries]}
+            if bs.bootstrap_type == 'local_multicast':
+                bootstrap['lastBootstrap'] = "Hasi Masi"
+            bootstraps.append(bootstrap)
+        
         endpoints = [{
             'localPort': ep.ui_localPort,
             'remoteAddr': ep.ui_remoteAddrStr,
@@ -135,18 +153,10 @@ class P2PMulticastBootstrapHandler(TemplatingHandler):
         p2pTransport = self.application.netCore.ui_p2pTransport()
         bs = next(bs for bs in p2pTransport.ui_bootstraps if bs.assignedId == bsId)
         assert bs.bootstrap_type == 'local_multicast'
-        
         action = self.get_argument('action')
-        print(action)
         #assert all(args)
-        if action == 'start':
-            bs.stop_bootstrap() # If at least one instance is alread running, then first stop it. Then start.
-            bs.start_bootstrap()
-        elif action == 'stop':
-            bs.stop_bootstrap()
-        elif action == 'period':
-            #bs.stop_bootstrap() # If at least one instance is alread running, then first stop it. Then start.
-            print("To implement")
+        bs.set_bootstrapping(action)
+        self.write({'last_bs': bs.ui_last_bs})
         
-        print("Starte Multicast Bootstrap")
+
         

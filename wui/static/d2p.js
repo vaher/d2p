@@ -375,7 +375,7 @@ ui_toggleControlPanel: function() {
     button.click(function() {
         d2p.content_goto('/_transports/dtn/');
     });
-    controlPanel.append(button);
+    //controlPanel.append(button);
 
     button = $('<div class="commandbutton button_p2p"></div>');
     button.text(d2p.i18n('P2P'));

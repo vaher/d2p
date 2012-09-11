@@ -68,6 +68,13 @@ def _setupAutoreload(cfg, io_loop):
 
 def main():
     opts = readOpts()
+    
+    try:
+        import android
+        opts.datadir = "/sdcard/Dokumente/d2p"
+    except:
+        print("No Android")
+    
     _setupDatadir(opts)
     cfg = _readConfig(opts)
 

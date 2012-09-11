@@ -10,8 +10,8 @@ class WebUI(object):
     def __init__(self, cfg, io_loop, project_manager, netCore):
         webCfg = cfg.get('web', {})
         portSpec = webCfg.get('port', 2180)
-        #addrs = webCfg.get('addrs', ['::1', '127.0.0.1'])
-        addrs = webCfg.get('addrs', [None])
+        addrs = webCfg.get('addrs', ['::1', '127.0.0.1'])
+        #addrs = webCfg.get('addrs', [None])
 
         self._application = tornado.web.Application(routes)
         self._application.project_manager = project_manager

@@ -10,7 +10,7 @@ class NetworkCore(netcorebase.AbstractNetCore):
     def __init__(self, io_loop, cfg, projectManager=None):
         super(NetworkCore, self).__init__(projectManager)
         self._transports = [
-            DTNTransport(io_loop, self, cfg),
+            #DTNTransport(io_loop, self, cfg),
             P2PTransport(io_loop, self, cfg)
         ]
 
@@ -20,14 +20,20 @@ class NetworkCore(netcorebase.AbstractNetCore):
 
     @property
     def ui_dtnTransport(self):
-        res = self._transports[0]
-        assert 'dtn' in res.transport_id
-        return res
-
+        #res = self._transports[0]
+        #assert 'dtn' in res.transport_id
+        for res in self._transports:
+            if 'dtn' in res.transport_id:
+                return res
+        return False
+    
     def ui_p2pTransport(self):
-        res = self._transports[1]
-        assert 'p2p' in res.transport_id
-        return res
+        #res = self._transports[1]
+        #assert 'p2p' in res.transport_id
+        for res in self._transports:
+            if 'p2p' in res.transport_id:
+                return res
+        return False
 
     def project_onLoad(self, project):
         """ Notify the project of all connected endpoints """
