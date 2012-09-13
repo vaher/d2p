@@ -9,7 +9,7 @@ import tornado.ioloop
 import random
 import d2p.core.bootstrap
 
-#class MulticastBootstrap(communication.Communication):
+
 class MulticastBootstrap():
     BOOTSTRAP_MSG = "bootstrap"
     BOOTSTRAP_ANSWER = "bootstrap_answer"
@@ -32,7 +32,7 @@ class MulticastBootstrap():
 
         callback = functools.partial(self._sendBsMsgHandler)
         self._pms = tornado.ioloop.PeriodicCallback(callback, 2000, io_loop = self.ioloop)
-        self.set_bootstrapping("start")
+        #self.set_bootstrapping("start")
         
     
     def set_bootstrapping(self, action):
@@ -51,6 +51,7 @@ class MulticastBootstrap():
         if len(self._interface_sockets) == 0:
             for new_if in new_interfaces:
                 ifname_sock = (new_if[0], self._createSocket(new_if[1]), self._createSenderSocket(new_if[1]))
+                #ifname_sock = (new_if[0], self._createSocket("0.0.0.0"), self._createSenderSocket("0.0.0.0"))
                 self._interface_sockets.append(ifname_sock)
                 
                 # Add the new reveiver socket to the ioloop handler
@@ -65,7 +66,9 @@ class MulticastBootstrap():
                         already_contained = True
                         break
                 if not already_contained:
+                    
                     ifname_sock = (new_if[0], self._createSocket(new_if[1]), self._createSenderSocket(new_if[1]))
+                    #ifname_sock = (new_if[0], self._createSocket("0.0.0.0"), self._createSenderSocket("0.0.0.0"))
                     
                     # Add the new reveiver socket to the ioloop handler
                     callback = functools.partial(self._receivedMsgHandler, ifname_sock[1])
@@ -104,6 +107,7 @@ class MulticastBootstrap():
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
         sock.bind(("", self.BOOTSTRAP_PORT))
+        
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 3)
         
         #Tell the kernel that we want to listen on multicast packets. Add to a multicast group.
@@ -121,6 +125,8 @@ class MulticastBootstrap():
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             
             #sock.bind(('', self.BOOTSTRAP_PORT))
+            
+            #sock.setsockopt(socket, IPPROTO_IP, IP_MULTICAST_LOOP, 1, 1) #Enable or disable loopback
             
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 3) # Set the hop count
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(up_if_ip))
@@ -172,7 +178,8 @@ class MulticastBootstrap():
         bootstrapMsg = self._createBsMsg()
 
         for element in self._interface_sockets:
-            sender_socket = element[2]
+            #sender_socket = element[2]
+            sender_socket = element[1]
             utf8_coded_msg = bytes(bootstrapMsg, "UTF-8")
             dest_addr = (self.MCAST_IP, self.BOOTSTRAP_PORT)
             try:
