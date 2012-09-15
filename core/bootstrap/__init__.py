@@ -20,7 +20,7 @@ def create(data):
 
 @_registerBootstrap
 class MulticastBootstrap(object):
-    bootstrap_type = 'local_multicast'
+    bootstrap_type = 'multicast'
     ui_bootstrap_name = 'Multicast bootstrap'
     
     def start(self, assignedId, io_loop, getAdvertised, onFind):
@@ -31,7 +31,8 @@ class MulticastBootstrap(object):
         self._entries = []
                 
         self._multicast_bootstrap = multicastbootstrap.MulticastBootstrap(io_loop, self._getAdvertised, self.ui_addEntry)        
-        self.set_bootstrapping =  self._multicast_bootstrap.set_bootstrapping
+        self.start_send_bs = self._multicast_bootstrap.start
+        self.stop_send_bs = self._multicast_bootstrap.stop
 
     def renotify(self):
         """ Call onFind for all entries this bootstrap has found """

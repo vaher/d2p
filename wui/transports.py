@@ -91,7 +91,7 @@ class P2PHandler(TemplatingHandler):
         #    
         #} for bs in p2pTransport.ui_bootstraps
         
-        #if bs.bootstrap_type == 'local_multicast']
+        #if bs.bootstrap_type == 'multicast']
         bootstraps = []
         for bs in p2pTransport.ui_bootstraps:
             bootstrap = {'id': bs.assignedId,
@@ -102,7 +102,7 @@ class P2PHandler(TemplatingHandler):
                 'addr': e.addr,
                 'port': e.port,
             } for e in bs.ui_entries]}
-            if bs.bootstrap_type == 'local_multicast':
+            if bs.bootstrap_type == 'multicast':
                 bootstrap['lastBootstrap'] = "Hasi Masi"
             bootstraps.append(bootstrap)
         
@@ -154,10 +154,13 @@ class P2PMulticastBootstrapHandler(TemplatingHandler):
         bsId = int(bsId)
         p2pTransport = self.application.netCore.ui_p2pTransport()
         bs = next(bs for bs in p2pTransport.ui_bootstraps if bs.assignedId == bsId)
-        assert bs.bootstrap_type == 'local_multicast'
+        assert bs.bootstrap_type == 'multicast'
         action = self.get_argument('action')
         #assert all(args)
-        bs.set_bootstrapping(action)
+        if action == 'start':
+            bs.start_send_bs()
+        elif action == 'stop':
+            bs.stop_send_bs()
         self.write({'last_bs': bs.ui_last_bs})
         
 

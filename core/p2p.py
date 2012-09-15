@@ -74,7 +74,7 @@ class P2PTransport(object):
         p2pCfg = cfg.get('p2p', {})
         bootstrapCfg = cfg.get('bootstraps', [
         {'bsType': 'manual'}, 
-        {'bsType': 'local_multicast'}
+        {'bsType': 'multicast'}
         ])
         for bcfg in bootstrapCfg:
             bs = bootstrap.create(bcfg)

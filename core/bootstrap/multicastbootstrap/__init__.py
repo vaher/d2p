@@ -7,90 +7,76 @@ import json
 
 import tornado.ioloop
 import random
-import d2p.core.bootstrap
-
+try:
+    import d2p.core.bootstrap
+except ImportError as e:
+    pass
 
 class MulticastBootstrap():
-    BOOTSTRAP_MSG = "bootstrap"
-    BOOTSTRAP_ANSWER = "bootstrap_answer"
-    BOOTSTRAP_PORT = 8778
-    MCAST_IP = "224.168.2.9"
-    # generated from "uniduesseldorf,valerij" with sha1 on the website http://www.php-einfach.de/sonstiges_generator_md5.php
-    PID = "144c3010108b2b6c1a39f589722c0aef97af1982" 
+    _bootstrap_msg = "bootstrap"
+    _bootstrap_answer = "bootstrap_answer"
+    _bootstrap_port = 8778
+    _mcast_ip = "224.0.1.190" 
     
+    # generated from python3 """hashlib.md5("anton.die.ente".encode("utf-8")).hexdigest()"""
+    _magic_number = "6e5ebb3cbbfdbc0dada950e87bf2a342"
+
     def __init__(self, ioloop, getAdvertised, addEntry):
         self.ioloop = ioloop
         self._getAdvertised = getAdvertised
-        self.addEntry = addEntry
-        self.MyMID = self._createMyMID()
+        self._addEntry = addEntry
+        self._my_mid = self._createMyMID()
 
-        self._interface_sockets = [] # list of namedtupels with interface name and receiv_
-        
-        callback = functools.partial(self._checkInterfaces)
-        self._p_if_c = tornado.ioloop.PeriodicCallback(callback, 1000, io_loop = self.ioloop)
+        #self._interface_sockets = []
+        self._old_interfaces = []
+
+        self._p_if_c = tornado.ioloop.PeriodicCallback(self._checkInterfaces, 1000, io_loop = self.ioloop)
         self._p_if_c.start()
 
-        callback = functools.partial(self._sendBsMsgHandler)
-        self._pms = tornado.ioloop.PeriodicCallback(callback, 2000, io_loop = self.ioloop)
-        #self.set_bootstrapping("start")
-        
-    
-    def set_bootstrapping(self, action):
-        """This method will be called from the ui and start and stop the multicast bootstrap sender. """
-        if action == "stop":
-            self._pms.stop()
-        elif action == "start":
-            self._pms.stop()
-            self._pms.start()
+        self._pms = tornado.ioloop.PeriodicCallback(self._sendBsMsgHandler, 3000, io_loop = self.ioloop)
 
-    
+        self._socket = self._createSocket() # exper
+        #callback = functools.partial(self._receivedMsgHandler)
+        self.ioloop.add_handler(self._socket.fileno(), self._receivedMsgHandler, self.ioloop.READ)
+        
+
+    def start(self):
+        """Start sending multicast bootstrap messages"""
+        self._pms.stop() # First stop the PeriodicCallback then start. Otherwise several PMC will send bs_msg parallel
+        self._pms.start()
+
+    def stop(self):
+        """Start sending multicast bootstrap messages"""
+        self._pms.stop()
+
     def _checkInterfaces(self):
         """This method will be called periodicaly and checks if new interfaces are available or old interfaces lost.
         If a new is available then one multicast reveiver and one multicast sender socket for this interface will created."""
-        new_interfaces = self._searchSuitableInterfaces()  
-        if len(self._interface_sockets) == 0:
+        new_interfaces = self._searchSuitableInterfaces()
+        if len(self._old_interfaces) == 0:
+            self._old_interfaces = new_interfaces
             for new_if in new_interfaces:
-                ifname_sock = (new_if[0], self._createSocket(new_if[1]), self._createSenderSocket(new_if[1]))
-                #ifname_sock = (new_if[0], self._createSocket("0.0.0.0"), self._createSenderSocket("0.0.0.0"))
-                self._interface_sockets.append(ifname_sock)
-                
-                # Add the new reveiver socket to the ioloop handler
-                callback = functools.partial(self._receivedMsgHandler, ifname_sock[1])
-                self.ioloop.add_handler(ifname_sock[1].fileno(), callback, self.ioloop.READ)
-        else:           
+                self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self._mcast_ip) + socket.inet_aton(new_if[1]))
+
+        else:
             # Look if new found interfaces are already known
             for new_if in new_interfaces:
-                already_contained = False
-                for old_if in self._interface_sockets:
-                    if new_if[0] == old_if[0]:
-                        already_contained = True
-                        break
-                if not already_contained:
-                    
-                    ifname_sock = (new_if[0], self._createSocket(new_if[1]), self._createSenderSocket(new_if[1]))
-                    #ifname_sock = (new_if[0], self._createSocket("0.0.0.0"), self._createSenderSocket("0.0.0.0"))
-                    
-                    # Add the new reveiver socket to the ioloop handler
-                    callback = functools.partial(self._receivedMsgHandler, ifname_sock[1])
-                    self.ioloop.add_handler(ifname_sock[1].fileno(), callback, self.ioloop.READ)
-                    
-                    self._interface_sockets.append(ifname_sock)
-                        
+                if all(new_if[0] != old_if[0] for old_if in self._old_interfaces):
+                    self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self._mcast_ip) + socket.inet_aton(new_if[1]))
+                    self._old_interfaces.append(new_if)
+
             # Look if old interfaces are still available
-            for old_if in self._interface_sockets:
-                is_present = False
-                for new_if in new_interfaces:  
-                    if  new_if[0] == old_if[0]:
-                        is_present = True
-                        break      
-                if not is_present:
-                    fd = old_if[1].fileno()
-                    self.ioloop.remove_handler(fd)
-                    self._interface_sockets.remove(old_if)
-                    
-                    
+            for old_if in self._old_interfaces:
+                if all(new_if[0] != old_if[0] for new_if in new_interfaces):
+                    self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, socket.inet_aton(self._mcast_ip) + socket.inet_aton(old_if[1]))
+                    self._old_interfaces.remove(old_if)
+                    #fd = old_if[1].fileno()
+                    #self.ioloop.remove_handler(fd)
+                    #self._interface_sockets.remove(old_if)
+
+
     def _searchSuitableInterfaces(self, interfaces_blacklist = ["lo"]):
-        """ This method returns a list of available network interfaces. 
+        """ This method returns a list of available network interfaces.
         If one of the interfaces is contained in the blacklist, then this interface will not used
         @return : returns interfaces that can used for a multicast bootstrap.
         """
@@ -102,53 +88,30 @@ class MulticastBootstrap():
         return active_interfaces
 
 
-    def _createSocket(self, up_if_ip=""):
+    def _createSocket(self):
         """This method creates a ipv4 multicast udp socket"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-        sock.bind(("", self.BOOTSTRAP_PORT))
-        
+        sock.bind(("", self._bootstrap_port))
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 3)
-        
-        #Tell the kernel that we want to listen on multicast packets. Add to a multicast group.
-        #The up_if_ip is important if the device is an AP or in wi-fi direct mode, else the socket do not know on which interfaces will come multicast packets.
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self.MCAST_IP) + socket.inet_aton(up_if_ip))
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(up_if_ip)) #If send multicast packets this is importand to for the socket to know if AP.
-        sock.setblocking(1)
-        return sock       
+        sock.setblocking(0)
+        return sock
         
         
-    def _createSenderSocket(self, up_if_ip=""):
-        """This method creates a ipv4 multicast udp socket for sending multicast udp packets"""
+    def _receivedMsgHandler(self, fd, events):
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            
-            #sock.bind(('', self.BOOTSTRAP_PORT))
-            
-            #sock.setsockopt(socket, IPPROTO_IP, IP_MULTICAST_LOOP, 1, 1) #Enable or disable loopback
-            
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 3) # Set the hop count
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(up_if_ip))
-        except socket.error as e:
-            return False
-        return sock      
-
-
-    def _receivedMsgHandler(self, sock, fd, events):
-        try:
-            data, addr = sock.recvfrom(1024)
+            data, addr = self._socket.recvfrom(1024)
             data_str = data.decode("UTF-8")
-            self._handleReceivedMsg(sock, data_str, addr)
+            self._handleReceivedMsg(data_str, addr)
         except socket.error as e:
             #self.ioloop.remove_handler(fd)
             logging.error("Exception in MulticastBootstrap _receivedMsgHandler")
             ############# DEBUG #############
-            helping_functions.print_msg_for_debug("BOOTSTRAP_MSG receiving FAULT")
+            helping_functions.print_msg_for_debug("_bootstrap_msg receiving FAULT")
             ################################
 
 
-    def _handleReceivedMsg(self, sock, data, addr):
+    def _handleReceivedMsg(self,data, addr):
         """This method checks which message type was received and how to react to this message.
         @param data: the received data.
         @type data: A String read from a socket.
@@ -158,15 +121,14 @@ class MulticastBootstrap():
         is_data_valid = self._isDataValid(data)
         if is_data_valid is not False:
             jsonData = is_data_valid
-            if jsonData["MSG_TYPE"] == self.BOOTSTRAP_MSG:
-                #self._notifyMember("p2p-ipv6-tcp", addr[0], int(jsonData["DATA"]["TRANSPORT_PORT"])) # Währe ein Angrifspunkt für die Anwendung
+            if jsonData["MSG_TYPE"] == self._bootstrap_msg:
                 dest_addr = (addr[0], jsonData["DATA"]["PORT"])
                 TEMP_INFO = jsonData["DATA"]["RANDOMNUM"]
-                self._sendBootstrapAnswer(sock, dest_addr, TEMP_INFO)
+                self._sendBootstrapAnswer(dest_addr, TEMP_INFO)
                 ############ DEBUG #############
                 helping_functions.print_msg_for_debug("BOOTSTRAP_MSG received ## "+" Zufallszahl " + str(jsonData["DATA"]["RANDOMNUM"]))
                 ################################
-            if jsonData["MSG_TYPE"] == self.BOOTSTRAP_ANSWER:
+            if jsonData["MSG_TYPE"] == self._bootstrap_answer:
                 self._notifyMember("p2p-ipv6-tcp", addr[0], int(jsonData["DATA"]["TRANSPORT_PORT"]))
                 ############ DEBUG #############
                 helping_functions.print_msg_for_debug("BOOTSTRAP_ANSWER received from " +addr[0]+ " RE_Zufallszahl " +str(jsonData["DATA"]["RANDOMNUM"]))
@@ -177,57 +139,54 @@ class MulticastBootstrap():
         """This method send over all available interfaces an bootstrap message."""
         bootstrapMsg = self._createBsMsg()
 
-        for element in self._interface_sockets:
-            #sender_socket = element[2]
-            sender_socket = element[1]
+        for old_if in self._old_interfaces:
             utf8_coded_msg = bytes(bootstrapMsg, "UTF-8")
-            dest_addr = (self.MCAST_IP, self.BOOTSTRAP_PORT)
+            dest_addr = (self._mcast_ip, self._bootstrap_port)
             try:
-                sender_socket.sendto(utf8_coded_msg, dest_addr)
+                self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(old_if[1]))
+                self._socket.sendto(utf8_coded_msg, dest_addr)
                 ############# DEBUG #############
                 temp = json.loads(bootstrapMsg)
                 zufallszahl = temp["DATA"]["RANDOMNUM"]
-                helping_functions.print_msg_for_debug("BOOTSTRAP sended  IF:"+ str(element[0]) + " SE_Zufallszahl " + str(zufallszahl))
+                helping_functions.print_msg_for_debug("BOOTSTRAP sended  IF:"+ str(old_if[0]) + " SE_Zufallszahl " + str(zufallszahl))
                 #################################
             except socket.error as e:
-                logging.error("BOOTSTRAP_MSG sended FAULT in McastBootstrapSender")
+                #logging.error("BOOTSTRAP_MSG sended FAULT in McastBootstrapSender")
                 ############# DEBUG #############
                 helping_functions.print_msg_for_debug("BOOTSTRAP_MSG sended FAULT in McastBootstrapSender")
                 #################################
-        if len(self._interface_sockets) == 0:
+        if len(self._old_interfaces) == 0:
             ############# DEBUG #############
-            helping_functions.print_msg_for_debug("Available interfaces: " + self._interface_sockets.__str__())
-            #################################    
+            helping_functions.print_msg_for_debug("Available interfaces: " + self._old_interfaces.__str__())
+            #################################
 
-    def _sendBootstrapAnswer(self, sock, dest_addr, TEMP_INFO):
+    def _sendBootstrapAnswer(self, dest_addr, TEMP_INFO):
         """This method answers to the multicast bootstrap message of a new member with a unicast datagram packet.
         @param newMember: This Member object contains all relevant informations like host, port or MID of the new member.
         @type newMember: A Member object
-        """   
-        #for sender_sock in self._interface_sockets:
-        #    sock = sender_sock[2]
+        """
         transport_infos = self._getAdvertised()
         transport_port = transport_infos[0].port
-        
-        informations = {"PORT" : self.BOOTSTRAP_PORT, "TRANSPORT_PORT" : transport_port, "RANDOMNUM" : TEMP_INFO}
-        bootstrap_answer = self._getHighestWrapperMsg(self.BOOTSTRAP_ANSWER, informations)
-        dataToSend = json.dumps(bootstrap_answer)
+
+        informations = {"PORT" : self._bootstrap_port, "TRANSPORT_PORT" : transport_port, "RANDOMNUM" : TEMP_INFO}
+        bs_answer = self._getHighestWrapperMsg(self._bootstrap_answer , informations)
+        dataToSend = json.dumps(bs_answer)
         data_bytes = bytes(dataToSend, "UTF-8")
-        
-        sock.sendto(data_bytes, dest_addr)
-        
+
+        self._socket.sendto(data_bytes, dest_addr)
+
         ########### Debug ##############
-        helping_functions.print_msg_for_debug("BOOTSTRAP_MSG answered to  " + str(dest_addr[0]) + " : "+ str(dest_addr[1]) +" Zufallszahl "+ str(TEMP_INFO))     
+        helping_functions.print_msg_for_debug("BOOTSTRAP_MSG answered to  " + str(dest_addr[0]) + " : "+ str(dest_addr[1]) +" Zufallszahl "+ str(TEMP_INFO))
         print("-------------------")
         ################################
-    
+
     def _getHighestWrapperMsg(self, msg_type, data=""):
         """This is the highest wrapper msg with all relevant informations for identification, assignement and data transport.
             @param msg_type: Defines the message type.
             @param data: The data witch should send with the message wrapper. Default is a blank String.
             @return: dict
         """
-        return {"PID":self.PID, "MID":self.MyMID, "MSG_TYPE":msg_type, "DATA":data}
+        return {"MAGIC_NUMBER":self._magic_number, "MID":self._my_mid, "MSG_TYPE":msg_type, "DATA":data}
     
     def _createBsMsg(self):
         """This method generates a bootstrap message to sending over the multicast sockets.
@@ -237,9 +196,9 @@ class MulticastBootstrap():
         """
         transport_infos = self._getAdvertised()
         transport_port = transport_infos[0].port
-        data_part = {"PORT" : self.BOOTSTRAP_PORT, "TRANSPORT_PORT" : transport_port, "RANDOMNUM" : round(random.random()*1000)}
-        bootstrap_msg = self._getHighestWrapperMsg(self.BOOTSTRAP_MSG, data_part)
-        return json.dumps(bootstrap_msg)
+        data_part = {"PORT" : self._bootstrap_port, "TRANSPORT_PORT" : transport_port, "RANDOMNUM" : round(random.random()*1000)}
+        bs_msg = self._getHighestWrapperMsg(self._bootstrap_msg, data_part)
+        return json.dumps(bs_msg)
 
     def _notifyMember(self, transportId, addr, port):
         """Create the BootstrapEntry namedtuple, set the data and call the addEntry method from d2p"""
@@ -249,8 +208,8 @@ class MulticastBootstrap():
         bse.addr = "::ffff:"+addr
         print(bse.addr)
         bse.port = port
-        self.addEntry(bse)
-    
+        self._addEntry(bse)
+
     def _isDataValid(self, data):
         """This method checks if the received data packet is valid and aimed to this program. If yes then return the data as jsonData else return False
         @param data: The data that should checked on validity.
@@ -258,19 +217,40 @@ class MulticastBootstrap():
         @return: boolean socket data converted to json string if valid and False if not aimed to this program.
         """
         jsonData = json.loads(data)
-        if jsonData["PID"] == self.PID: # Check if it is the right protocol
-            if jsonData["MID"] != self.MyMID: # Check if message is my own bootstrap msg # TODO: Ist das notwendig???
+        if jsonData["MAGIC_NUMBER"] == self._magic_number: # Check if it is the right protocol
+            if jsonData["MID"] != self._my_mid: # Check if message is my own bootstrap msg # TODO: Ist das notwendig???
                 return jsonData
-        return False             
-  
+        return False
+
     def _createMyMID(self):
         """Creates a random member id..
         With this id other peers in the network can see if the received msg is comming from another peer.
         @return: Random generated integer."""
-        return round(random.random()*100000000) 
-        
-              
-                    
-if __name__ == "__main__":
-    print("Receiving started")
-    #McastBootstrapReceiver()        
+        return round(random.random()*100000000)
+
+
+
+
+
+
+import collections
+BootstrapEntry = collections.namedtuple('BootstrapEntry',
+                                         ['transportId',
+                                          'addr', # IP (or similar) address. None for automatic detection
+                                          'port' # Extended information like port
+                                         ])
+
+def getAdvertised():
+    return [BootstrapEntry("p2p-ipv6-tcp", None, 48865)]
+    
+def addEntry(bse):
+    print("Add Entry!!!")
+    return
+
+def main():
+    print("Multicast Bootstrap started")
+    io_loop = tornado.ioloop.IOLoop()
+    mbs = MulticastBootstrap(io_loop, getAdvertised, addEntry)
+    mbs.start()
+    io_loop.start()
+    

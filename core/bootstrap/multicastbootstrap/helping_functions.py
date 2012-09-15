@@ -29,12 +29,14 @@ def get_up_ifs_and_ip():
     else:
         raise OSError("Unknown architecture: %s" % arch)
     
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
     
     temp_bytecodes = B'\0' * MAXBYTES
     names = array.array('B', temp_bytecodes)
-            
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     fd = sock.fileno()
+    
     op = SIOCGIFCONF
     arg = struct.pack('iL', MAXBYTES, names.buffer_info()[0])
     struct_temp = fcntl.ioctl(fd, op, arg)
@@ -48,12 +50,11 @@ def get_up_ifs_and_ip():
         if_addr =  socket.inet_ntoa(namestr[i+20:i+24])
         interface = (if_name, if_addr)
         active_interfaces.append(interface)
-        
+    sock.close()
     return active_interfaces
 
     
 def print_msg_for_debug(to_sending_msg):
-    ###################################
     print(to_sending_msg)
     print("")
     try:
@@ -63,4 +64,3 @@ def print_msg_for_debug(to_sending_msg):
         #droid.log(to_sending_msg)
     except Exception as e:
         pass
-    ################################

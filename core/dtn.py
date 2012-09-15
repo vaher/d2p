@@ -189,7 +189,8 @@ class DTNTransport(object):
             project.handleEndpoint(e)
 
     def _setupChangeMonitor(self):
-        return _is_android_dev()
+        if _is_android_dev():
+            return
         context = pyudev.Context()
         monitor = pyudev.Monitor.from_netlink(context)
         monitor.filter_by(**_UDEV_SEARCHCRIT)

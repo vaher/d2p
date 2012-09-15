@@ -69,11 +69,12 @@ def _setupAutoreload(cfg, io_loop):
 def main():
     opts = readOpts()
     
+    # TODO: Delete and paste the path to opts as default path.
     try:
         import android
         opts.datadir = "/sdcard/Dokumente/d2p"
     except:
-        print("No Android")
+        pass
     
     _setupDatadir(opts)
     cfg = _readConfig(opts)

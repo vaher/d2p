@@ -67,7 +67,7 @@ $('.p2p_bootstrap[data-bootstrap-type="manual"]').each(function(i, el) {
 
 
 
-$('.p2p_bootstrap[data-bootstrap-type="local_multicast"]').each(function(i, el) {
+$('.p2p_bootstrap[data-bootstrap-type="multicast"]').each(function(i, el) {
     var bsEl = $(el);
 
     var entryTable = bsEl.find('.p2p_bootstrap_entries');
