@@ -90,8 +90,8 @@ class P2PHandler(TemplatingHandler):
         #    } for e in bs.ui_entries]
         #    
         #} for bs in p2pTransport.ui_bootstraps
-        
-        #if bs.bootstrap_type == 'multicast']
+
+
         bootstraps = []
         for bs in p2pTransport.ui_bootstraps:
             bootstrap = {'id': bs.assignedId,
@@ -102,8 +102,17 @@ class P2PHandler(TemplatingHandler):
                 'addr': e.addr,
                 'port': e.port,
             } for e in bs.ui_entries]}
+            
             if bs.bootstrap_type == 'multicast':
-                bootstrap['lastBootstrap'] = "Hasi Masi"
+                if bs.is_running():
+                    bs_info = "Yes"
+                else:
+                    bs_info = "No"
+                bootstrap['controlinfos'] = {
+                'isRunning': bs_info, 
+                'lastActivBsTimestamp': bs.last_activ_bs_ts()
+                }
+                
             bootstraps.append(bootstrap)
         
         endpoints = [{
@@ -161,7 +170,9 @@ class P2PMulticastBootstrapHandler(TemplatingHandler):
             bs.start_send_bs()
         elif action == 'stop':
             bs.stop_send_bs()
-        self.write({'last_bs': bs.ui_last_bs})
+        elif action == 'startPeriod':
+            bs.startPeriod_send_bs(2)
+        #self.write({'last_bs': bs.ui_last_bs})
         
 
         

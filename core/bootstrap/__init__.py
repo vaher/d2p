@@ -32,7 +32,10 @@ class MulticastBootstrap(object):
                 
         self._multicast_bootstrap = multicastbootstrap.MulticastBootstrap(io_loop, self._getAdvertised, self.ui_addEntry)        
         self.start_send_bs = self._multicast_bootstrap.start
+        self.startPeriod_send_bs = self._multicast_bootstrap.startPeriod
         self.stop_send_bs = self._multicast_bootstrap.stop
+        self.is_running = self._multicast_bootstrap.isRunning
+        self.last_activ_bs_ts = self._multicast_bootstrap.getLastBsTime
 
     def renotify(self):
         """ Call onFind for all entries this bootstrap has found """

@@ -30,6 +30,13 @@
 <div class="p2p_bootstrap" data-bootstrap-id="{{id}}" data-bootstrap-type="{{type}}">
 <h3 title="{{type}}">{{name}}-{{id}}</h3>
 
+
+{{#controlinfos}}
+<div><b>Is running?: </b>{{isRunning}}</div>
+<div><b>Last activ Bootstrap try: </b>{{lastActivBsTimestamp}}</div>
+<br>
+{{/controlinfos}}
+
 <table class="p2p_bootstrap_entries">
 <thead>
 <tr><th>transport</th><th>address</th><th>Port</th></tr>

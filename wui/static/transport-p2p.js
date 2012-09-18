@@ -70,28 +70,8 @@ $('.p2p_bootstrap[data-bootstrap-type="manual"]').each(function(i, el) {
 $('.p2p_bootstrap[data-bootstrap-type="multicast"]').each(function(i, el) {
     var bsEl = $(el);
 
-    var entryTable = bsEl.find('.p2p_bootstrap_entries');
-    
-    
-    var newRow = $('<tr class="p2p_bootstrap_newRow">');
-    
-    var entry = {'action': 'last_bootstrap_time'};
-    var url = '/_transports/p2p/bootstrap/' + bsEl.attr('data-bootstrap-id') + '/multicast/entries/';
-    var data_temp = d2p.i18n("Keine Angabe möglich");
-    d2p.sendQuery(url, entry, function(data) {
-        data_temp = data['last_bs'];
+    //var entryTable = bsEl.find('.p2p_bootstrap_entries');
         
-        //d2p.content_goto('/_transports/p2p/');
-    });
-
-    
-    var last_bootstrap_request =  $('<div>').text(data_temp);
-    var td = $('<td>');
-    last_bootstrap_request.appendTo(td);
-    td.appendTo(newRow);
-    entryTable.find('tbody').append(newRow);
-    
-    
     var newRow = $('<tr class="p2p_bootstrap_newRow">');
 
     var refresh = $('<input type="button">');
@@ -99,23 +79,25 @@ $('.p2p_bootstrap[data-bootstrap-type="multicast"]').each(function(i, el) {
     refresh.click(function() {
         document.location.reload(true)
     });
-    var td = $('<td>');
-    refresh.appendTo(td);
-    td.appendTo(newRow);
+    refresh.appendTo(bsEl);
+    //var td = $('<td>');
+    //refresh.appendTo(td);
+    //td.appendTo(newRow);
     
     
     var start_mc_bs_period = $('<input type="button">');
     start_mc_bs_period.attr({value: d2p.i18n('Start Period')});
     start_mc_bs_period.click(function() {
-        var entry = {'action': 'start'};
+        var entry = {'action': 'startPeriod'};
         var url = '/_transports/p2p/bootstrap/' + bsEl.attr('data-bootstrap-id') + '/multicast/entries/';
         d2p.sendQuery(url, entry, function() {
             d2p.content_goto('/_transports/p2p/');
         });
     });
-    var td = $('<td>');
-    start_mc_bs_period.appendTo(td);
-    td.appendTo(newRow);
+    start_mc_bs_period.appendTo(bsEl);
+    //var td = $('<td>');
+    //start_mc_bs_period.appendTo(td);
+    //td.appendTo(newRow);
 
 
     var start_mc_bs = $('<input type="button">');
@@ -129,9 +111,9 @@ $('.p2p_bootstrap[data-bootstrap-type="multicast"]').each(function(i, el) {
             //start_mc_bs_period.attr("disabled", "disabled");
         });
     });
-    
-    var td = $('<td>');
-    start_mc_bs.appendTo(td);
+    start_mc_bs.appendTo(bsEl);
+    //var td = $('<td>');
+    //start_mc_bs.appendTo(td);
 
     var stop_mc_bs = $('<input type="button">');
     stop_mc_bs.attr({value: d2p.i18n('Stop')});
@@ -142,11 +124,12 @@ $('.p2p_bootstrap[data-bootstrap-type="multicast"]').each(function(i, el) {
             d2p.content_goto('/_transports/p2p/');
         });
     });
-    stop_mc_bs.appendTo(td);
-    td.appendTo(newRow);
+    stop_mc_bs.appendTo(bsEl);
+    //stop_mc_bs.appendTo(td);
+    //td.appendTo(newRow);
 
 
-    entryTable.find('tbody').append(newRow);
+    //entryTable.find('tbody').append(newRow);
 });
 
 
