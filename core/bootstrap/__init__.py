@@ -18,45 +18,8 @@ def create(data):
     return _bootstrap_types[data['bsType']]()
 
 
-@_registerBootstrap
-class MulticastBootstrap(object):
-    bootstrap_type = 'multicast'
-    ui_bootstrap_name = 'Multicast bootstrap'
-    
-    def start(self, assignedId, io_loop, getAdvertised, onFind):
-        """ Start running on the specified io_loop """
-        self.assignedId = assignedId
-        self._getAdvertised = getAdvertised
-        self._onFind = onFind
-        self._entries = []
-                
-        self._multicast_bootstrap = multicastbootstrap.MulticastBootstrap(io_loop, self._getAdvertised, self.ui_addEntry)        
-        self.start_send_bs = self._multicast_bootstrap.start
-        self.startPeriod_send_bs = self._multicast_bootstrap.startPeriod
-        self.stop_send_bs = self._multicast_bootstrap.stop
-        self.is_running = self._multicast_bootstrap.isRunning
-        self.last_activ_bs_ts = self._multicast_bootstrap.getLastBsTime
 
-    def renotify(self):
-        """ Call onFind for all entries this bootstrap has found """
-        for e in self._entries:
-            self._onFind(e)
-
-    @property
-    def ui_entries(self):
-        return self._entries
-        
-    @property
-    def ui_last_bs(self):
-        return "Mein letzter bs"
-
-    def ui_addEntry(self, bse):
-        #print(isinstance(bse, BootstrapEntry))
-        #assert isinstance(bse, BootstrapEntry) #TODO: Überlege wie ich es schaffe, dass es die selbe Instanz ist!
-        assert bse.addr
-        self._entries.append(bse)
-        self._onFind(bse)
-
+_registerBootstrap(multicastbootstrap.MulticastBootstrap)
 
 
 @_registerBootstrap

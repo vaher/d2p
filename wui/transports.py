@@ -12,8 +12,6 @@ class DTNHandler(TemplatingHandler):
         }
         if dtnTransport is not None:
             dct['dtn_endpoints'] = list(dtnTransport.ui_listEndpointInfo())
-        else:
-            dct['title'] = 'DTN endpoints steht nicht zur Verfügung'
         self.render(dct)
 
 class DTNEndpointHandler(TemplatingHandler):
@@ -104,13 +102,13 @@ class P2PHandler(TemplatingHandler):
             } for e in bs.ui_entries]}
             
             if bs.bootstrap_type == 'multicast':
-                if bs.is_running():
+                if bs.ui_is_running():
                     bs_info = "Yes"
                 else:
                     bs_info = "No"
                 bootstrap['controlinfos'] = {
                 'isRunning': bs_info, 
-                'lastActivBsTimestamp': bs.last_activ_bs_ts()
+                'lastActivBsTimestamp': bs.ui_last_activ_bs_ts
                 }
                 
             bootstraps.append(bootstrap)
@@ -167,11 +165,11 @@ class P2PMulticastBootstrapHandler(TemplatingHandler):
         action = self.get_argument('action')
         #assert all(args)
         if action == 'start':
-            bs.start_send_bs()
+            bs.ui_start_send_bs()
         elif action == 'stop':
-            bs.stop_send_bs()
+            bs.ui_stop_send_bs()
         elif action == 'startPeriod':
-            bs.startPeriod_send_bs(2)
+            bs.ui_startPeriod_send_bs(2)
         #self.write({'last_bs': bs.ui_last_bs})
         
 

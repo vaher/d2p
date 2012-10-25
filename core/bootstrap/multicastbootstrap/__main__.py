@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-
-
 import sys,os.path
 _ROOTDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

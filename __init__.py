@@ -72,7 +72,7 @@ def main():
     # TODO: Delete and paste the path to opts as default path.
     try:
         import android
-        opts.datadir = "/sdcard/Dokumente/d2p"
+        opts.datadir = "/sdcard/d2p"
     except:
         pass
     

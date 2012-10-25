@@ -13,6 +13,9 @@ except ImportError as e:
     pass
 
 class MulticastBootstrap():
+    bootstrap_type = 'multicast'
+    ui_bootstrap_name = 'Multicast bootstrap'
+    
     _bootstrap_msg = "bootstrap"
     _bootstrap_answer = "bootstrap_answer"
     _bootstrap_port = 8778
@@ -21,46 +24,62 @@ class MulticastBootstrap():
     # generated from python3 """hashlib.md5("anton.die.ente".encode("utf-8")).hexdigest()"""
     _magic_string = "6e5ebb3cbbfdbc0dada950e87bf2a342"
 
-    def __init__(self, ioloop, getAdvertised, addEntry):
-        self.ioloop = ioloop
-        self._getAdvertised = getAdvertised
-        self._addEntry = addEntry
-
+    def __init__(self):
         self._old_interfaces = []
+        
+        self._countPeriod = -1
+        self._periodNumber = 10
+        self._isBsRunning = False
+        self._lastActivBsTime = ""
+    
+    
+    def start(self, assignedId, io_loop, getAdvertised, onFind):
+        """ Start running on the specified io_loop """
+        self.ioloop = io_loop
+        self.assignedId = assignedId
+        self._getAdvertised = getAdvertised
+        self._onFind = onFind
+        self._entries = []
         
         self._socket = self._createSocket()
         self.ioloop.add_handler(self._socket.fileno(), self._receivedMsgHandler, self.ioloop.READ)
 
         self._p_if_c = tornado.ioloop.PeriodicCallback(self._checkInterfaces, 1000, io_loop = self.ioloop)
         self._p_if_c.start()
-        
-        self._countPeriod = -1
-        self._periodNumber = 10
-        self._isBsRunning = False
-        self._lastActivBsTime = "No try"
         self._pms = tornado.ioloop.PeriodicCallback(self._sendBsMsgHandler, 1000, io_loop = self.ioloop)
-    
-    def getLastBsTime(self):
+        #self.ui_startPeriod_send_bs(5)
+        
+        
+    def ui_addEntry(self, bse):
+        assert bse.addr
+        #self._entries.append(bse)
+        self._onFind(bse)
+        
+    @property
+    def ui_entries(self):
+        return self._entries
+        
+    def ui_last_activ_bs_ts(self):
         return self._lastActivBsTime
 
-    def isRunning(self):
+    def ui_is_running(self):
         return self._isBsRunning
         
-    def startPeriod(self, periodNumber=3):
+    def ui_startPeriod_send_bs(self, periodNumber=3):
         self._periodNumber = periodNumber
         self._pms.stop() # First stop the PeriodicCallback then start. Otherwise several PMC will send bs_msg parallel
         self._countPeriod = 0
         self._pms.start()
         self._isBsRunning = True
 
-    def start(self):
+    def ui_start_send_bs(self):
         """Start sending multicast bootstrap messages"""
         self._countPeriod = -1
         self._pms.stop() # First stop the PeriodicCallback then start. Otherwise several PMC will send bs_msg parallel
         self._pms.start()
         self._isBsRunning = True
 
-    def stop(self):
+    def ui_stop_send_bs(self):
         """Start sending multicast bootstrap messages"""
         self._pms.stop()
         self._countPeriod = -1
@@ -108,7 +127,7 @@ class MulticastBootstrap():
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
         sock.bind(("", self._bootstrap_port))
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 3)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0) #For not receiving own mcast msg.
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
         sock.setblocking(0)
         return sock
         
@@ -117,9 +136,7 @@ class MulticastBootstrap():
         try:
             data, addr = self._socket.recvfrom(1024)
         except socket.error as e:
-            ############# DEBUG #############
-            helping_functions.print_msg_for_debug("_bootstrap_msg receiving FAULT")
-            ################################
+            pass
         data_str = data.decode("UTF-8")
         self._handleReceivedMsg(data_str, addr)
 
@@ -135,23 +152,16 @@ class MulticastBootstrap():
             jsonData = json.loads(msg[len(self._magic_string):])
             if jsonData["MSG_TYPE"] == self._bootstrap_msg:
                 dest_addr = (addr[0], self._bootstrap_port)
-                TEMP_INFO = jsonData["DATA"]["RANDOMNUM"] #TODO: Remove this debug infos
-                self._sendBootstrapAnswer(dest_addr, TEMP_INFO)
-                ############ DEBUG #############
-                helping_functions.print_msg_for_debug("BOOTSTRAP_MSG received ## "+" Zufallszahl " + str(jsonData["DATA"]["RANDOMNUM"]))
-                ################################
+                self._sendBootstrapAnswer(dest_addr)
+                
             if jsonData["MSG_TYPE"] == self._bootstrap_answer:
                 self._notifyMember("p2p-ipv6-tcp", addr[0], int(jsonData["DATA"]["TRANSPORT_PORT"]))
-                ############ DEBUG #############
-                helping_functions.print_msg_for_debug("BOOTSTRAP_ANSWER received from " +addr[0]+ " RE_Zufallszahl " +str(jsonData["DATA"]["RANDOMNUM"]))
-                ################################
 
 
     def _sendBsMsgHandler(self):
         """This method send over all available interfaces a bootstrap message."""
-        print(self._countPeriod)
         if self._countPeriod >= self._periodNumber:
-            self.stop()
+            self.ui_stop_send_bs()
         if self._countPeriod in range(self._periodNumber):
             self._countPeriod = self._countPeriod + 1
             
@@ -163,23 +173,11 @@ class MulticastBootstrap():
                 self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(old_if[1]))
                 self._socket.sendto(utf8_coded_msg, dest_addr)
             except socket.error as e:
-                ############# DEBUG #############
-                helping_functions.print_msg_for_debug("BOOTSTRAP_MSG sended FAULT in McastBootstrapSender")
-                #################################
+                print("Sending Bootstrap MSG socket.error")
             self._lastActivBsTime = time.asctime()
-            ############# DEBUG #############
-            temp = json.loads(bootstrapMsg[len(self._magic_string):])
-            zufallszahl = temp["DATA"]["RANDOMNUM"]
-            helping_functions.print_msg_for_debug("BOOTSTRAP sended  IF:"+ str(old_if[0]) + " SE_Zufallszahl " + str(zufallszahl))
-            #################################
-             
-        ############# DEBUG #############   
-        if len(self._old_interfaces) == 0:
-            helping_functions.print_msg_for_debug("Available interfaces: " + self._old_interfaces.__str__())
-        #################################
 
 
-    def _sendBootstrapAnswer(self, dest_addr, TEMP_INFO):
+    def _sendBootstrapAnswer(self, dest_addr):
         """This method answers to the multicast bootstrap message of a new member with a unicast datagram packet.
         @param newMember: This Member object contains all relevant informations like host, port or MID of the new member.
         @type newMember: A Member object
@@ -187,15 +185,12 @@ class MulticastBootstrap():
         transport_infos = self._getAdvertised()
         transport_port = transport_infos[0].port
 
-        informations = {"TRANSPORT_PORT" : transport_port, "RANDOMNUM" : TEMP_INFO} #TODO: Remove DEBUG INFO RANDOMNUM! 
+        informations = {"TRANSPORT_PORT" : transport_port}
         bs_answer = self._getHighestWrapperMsg(self._bootstrap_answer , informations)
         data_bytes = bytes(bs_answer, "UTF-8")
         self._socket.sendto(data_bytes, dest_addr)
 
-        ########### Debug ##############
-        helping_functions.print_msg_for_debug("BOOTSTRAP_MSG answered to  " + str(dest_addr[0]) + " : "+ str(dest_addr[1]) +" Zufallszahl "+ str(TEMP_INFO))
-        print("-------------------")
-        ################################
+
 
     def _getHighestWrapperMsg(self, msg_type, data=""):
         """This is the highest wrapper msg with all relevant informations for identification, assignement and data transport.
@@ -226,7 +221,7 @@ class MulticastBootstrap():
         bse.addr = addr
         bse.addr = "::ffff:"+addr
         bse.port = port
-        self._addEntry(bse)
+        self.ui_addEntry(bse)
 
 
 
@@ -250,7 +245,8 @@ def addEntry(bse):
 def main():
     print("Multicast Bootstrap started")
     io_loop = tornado.ioloop.IOLoop()
-    mbs = MulticastBootstrap(io_loop, getAdvertised, addEntry)
-    mbs.start()
+    mbs = MulticastBootstrap()
+    mbs.start(io_loop, getAdvertised, addEntry)
+    mbs.ui_start_send_bs()
     io_loop.start()
     

@@ -122,13 +122,13 @@ class P2PTransport(object):
         s = socket.socket(family, socktype, proto)
         s.setblocking(0)
         ios = tornado.iostream.IOStream(s, self._io_loop)
-
         ios.connect(sockaddr, functools.partial(self._onNewIOStream, ios, (addr, port)))
 
     def _onNewIOStream(self, ios, remoteAddr):
         ep = P2PEndpoint(ios, self._netCore, self._io_loop, remoteAddr)
         self._endpoints.append(ep)
         self._netCore.transport_onNewEndpoint(self, ep)
+        
 
     @property
     def _localPort(self):
