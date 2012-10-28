@@ -1,4 +1,3 @@
-
 import json
 import os
 import optparse
@@ -15,7 +14,7 @@ from . import core
 def readOpts():
     parser = optparse.OptionParser(description='Censorship-resistant distributed collaboration')
     parser.add_option('-A', '--autoreload', action='store_true', default=None, dest='autoreload', help='Reload when a file gets changed')
-    parser.add_option('-d', '--data-dir', dest='datadir', help='D2P data directory', default='~/.d2p', metavar='DIR')
+    parser.add_option('-d', '--data-dir', dest='datadir', help='D2P data directory', default='/sdcard/d2p', metavar='DIR')
     parser.add_option('--print-url', action='store_true', dest='print_url', help='Print URL of the web interface')
     parser.add_option('-w', '--start-webbrowser', action='store_true', dest='start_webbrowser', help='Start a webbrowser')
     parser.add_option('--start-webbrowser-new', dest='start_webbrowser_new', help='Start a webbrowser in a new "tab", "window", or in the "same" browser window', default="tab", metavar='tab|window|same')
@@ -68,13 +67,6 @@ def _setupAutoreload(cfg, io_loop):
 
 def main():
     opts = readOpts()
-    
-    # TODO: Delete and paste the path to opts as default path.
-    try:
-        import android
-        opts.datadir = "/sdcard/d2p"
-    except:
-        pass
     
     _setupDatadir(opts)
     cfg = _readConfig(opts)

@@ -108,7 +108,7 @@ class MulticastBootstrap():
                     self._old_interfaces.remove(old_if)
 
 
-    def _searchSuitableInterfaces(self, interfaces_blacklist = ["lo"]):
+    def _searchSuitableInterfaces(self, interfaces_blacklist = ["lo", "rmnet", "rm", "net"]):
         """ This method returns a list of available network interfaces.
         If one of the interfaces is contained in the blacklist, then do not use this interface.
         @return : returns interfaces that can used for a multicast bootstrap.
@@ -116,7 +116,11 @@ class MulticastBootstrap():
         active_interfaces = []
         up_if_and_ip = helping_functions.get_up_ifs_and_ip()
         for up_if in up_if_and_ip:
-            if up_if[0] not in interfaces_blacklist:
+            is_contained = False
+            for black in interfaces_blacklist:
+                if black in up_if[0]:
+                    is_contained = True
+            if is_contained == False:
                 active_interfaces.append(up_if)
         return active_interfaces
 
@@ -210,7 +214,7 @@ class MulticastBootstrap():
         """
         transport_infos = self._getAdvertised()
         transport_port = transport_infos[0].port
-        data_part = {"TRANSPORT_PORT" : transport_port, "RANDOMNUM" : round(random.random()*1000)}
+        data_part = {"TRANSPORT_PORT" : transport_port}
         bs_msg = self._getHighestWrapperMsg(self._bootstrap_msg, data_part)
         return bs_msg
 
@@ -222,31 +226,4 @@ class MulticastBootstrap():
         bse.addr = "::ffff:"+addr
         bse.port = port
         self.ui_addEntry(bse)
-
-
-
-
-
-
-import collections
-BootstrapEntry = collections.namedtuple('BootstrapEntry',
-                                         ['transportId',
-                                          'addr', # IP (or similar) address. None for automatic detection
-                                          'port' # Extended information like port
-                                         ])
-
-def getAdvertised():
-    return [BootstrapEntry("p2p-ipv6-tcp", None, 48865)]
-    
-def addEntry(bse):
-    print("Add Entry!!!")
-    return
-
-def main():
-    print("Multicast Bootstrap started")
-    io_loop = tornado.ioloop.IOLoop()
-    mbs = MulticastBootstrap()
-    mbs.start(io_loop, getAdvertised, addEntry)
-    mbs.ui_start_send_bs()
-    io_loop.start()
     
